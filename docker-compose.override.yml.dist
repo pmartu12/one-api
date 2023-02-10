@@ -1,0 +1,27 @@
+version: '3.7'
+services:
+  php-fpm:
+    container_name:
+    ports: ['8123:80']
+    build:
+      args:
+        GITHUB_TOKEN:
+  messenger:
+    container_name:
+    build:
+      args:
+        GITHUB_TOKEN:
+  postgres:
+    container_name:
+  redis:
+    container_name:
+  pgadmin:
+    container_name:
+    ports: ['8081:8080', '8445:8443' ]
+  nodejs:
+    container_name:
+    environment:
+      POSTMAN_APIKEY: ''
+  mailhog:
+    container_name:
+    ports: [ '8025:8025', '1025:1025' ]

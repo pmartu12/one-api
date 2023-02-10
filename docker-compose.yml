@@ -1,0 +1,94 @@
+version: '3.8'
+services:
+  php-fpm:
+    working_dir: /app
+    depends_on:
+      - redis
+      - postgres
+    build:
+      context: .
+      target: php_dev
+      dockerfile: Dockerfile
+      args:
+        HOST_UID: ${HOST_UID}
+        HOST_GID: ${HOST_GID}
+    entrypoint: ./docker-entrypoint-dev.sh
+    volumes:
+      - .:/app:cached
+    tmpfs:
+      - /app/var/:uid=$HOST_UID,gid=$HOST_GID
+  messenger:
+    profiles: [ "messenger" ]
+    working_dir: /app
+    depends_on:
+      - php-fpm
+    build:
+      context: .
+      target: php_dev
+      dockerfile: Dockerfile
+    #    entrypoint: php /app/bin/console messenger:consume async --time-limit=3600
+    volumes:
+      - .:/app
+  postgres:
+    image: bitnami/postgresql:12
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      ALLOW_EMPTY_PASSWORD: 'yes'
+    volumes:
+      - ./.data/postgres:/var/lib/postgresql/data
+  redis:
+    image: "redis:alpine"
+    command: redis-server
+    environment:
+      - REDIS_REPLICATION_MODE=master
+  pgadmin:
+    profiles: [ "pgadmin" ]
+    image: bitnami/phppgadmin
+    environment:
+      DATABASE_HOST: postgres
+    depends_on:
+      - postgres
+  nodejs:
+    profiles: [ "quality" ]
+    working_dir: /app
+    build:
+      dockerfile: .docker/nodejs/Dockerfile
+      context: .
+    command: ["tail", "-F", "no-file"]
+    volumes:
+      - .:/app:cached
+  hugo:
+    profiles: [ "doc" ]
+    image: klakegg/hugo:0.92.1
+    command: server
+    volumes:
+      - "./docapi:/src"
+    ports:
+      - "1313:1313"
+  phpstan:
+    profiles: [ "quality" ]
+    build:
+      dockerfile: .docker/phpstan/Dockerfile
+      context: .
+    volumes:
+      - .:/app:cached
+      - ./bin:/app/bin:consistent
+      - ./config:/app/config:consistent
+      - ./public:/app/public:consistent
+      - ./src:/app/src:consistent
+      - ./var:/app/var:consistent
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:cached
+  phpcs:
+    profiles: [ "quality" ]
+    build:
+      dockerfile: .docker/phpcs/Dockerfile
+      context: .
+    volumes:
+      - .:/app:cached
+      - ./bin:/app/bin:consistent
+      - ./config:/app/config:consistent
+      - ./public:/app/public:consistent
+      - ./src:/app/src:consistent
+      - ./var:/app/var:consistent
+      - ${HOME}/.config/gcloud:/root/.config/gcloud:cached
+
